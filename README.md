@@ -221,6 +221,28 @@ building the backend image, since it's copied in at build time. The SQLite
 database is stored in a named Docker volume mounted at `/app/db` inside the
 container (`DB_DIR=/app/db`), so results persist across container restarts.
 
+## Cloud deployment (backend on Render, frontend on Vercel)
+
+Cloud deployment is optional per the assessment brief; local Docker Compose
+is already sufficient. If deploying anyway, the backend and frontend are
+deployed separately, deliberately — the backend (FastAPI + PyTorch +
+OpenCV) needs a platform that runs a persistent process; the frontend is a
+single static HTML file that fits anywhere. A serverless platform like
+Vercel is a poor fit for the *backend* specifically: the PyTorch/OpenCV
+dependencies alone exceed typical serverless function size limits, and a
+45MB model reloading on every cold start would be slow.
+
+**Backend on Render:**
+1. Push this repo to GitHub (already done if you're reading this from there).
+2. On [render.com](https://render.com): New → Blueprint → connect this repo. `render.yaml` at the repo root is auto-detected and configures the service (Docker runtime, `backend/Dockerfile`, `/health` as the health check path).
+3. Render injects a `PORT` environment variable at runtime; `backend/Dockerfile`'s `CMD` reads it (`--port ${PORT:-8000}`), so no manual port configuration is needed.
+4. **Free-tier caveat:** Render's free plan has an ephemeral filesystem (no persistent disk) — the SQLite history resets on every redeploy or restart. Fine for a demo; if you need history to survive restarts, add a persistent disk (`disk:` in `render.yaml`) on a paid plan, or swap SQLite for a managed Postgres (`db.py`'s `create_engine` call is the only place that would need to change).
+
+**Frontend on Vercel:**
+1. Deploy the `frontend/` folder as a static site (no build step needed).
+2. Update `API_BASE` in `frontend/index.html` to your Render backend's URL (e.g. `https://image-quality-backend.onrender.com`) before deploying — it's a plain JS constant, no env-var injection for a build-less static page.
+3. Set `CORS_ORIGINS` on the Render backend to your Vercel domain (via Render's dashboard env vars) instead of leaving it at `*`, once you know the deployed frontend URL.
+
 ## Model loading & inference at deployment
 
 The checkpoint (`models/hybrid_model.pt`, ~45MB) is loaded once, lazily, on

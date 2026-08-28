@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: image-quality-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: DB_DIR
+        value: /app/db
