@@ -1,0 +1,11 @@
+{
+  "dataset": "Oxford Flowers102 (test split, undegraded, unseen domain)",
+  "n_images": 100,
+  "mean_quality_score": 92.55,
+  "label_distribution": {
+    "DEGRADED": 6,
+    "DEFECTIVE": 1,
+    "ACCEPTABLE": 93
+  },
+  "pct_acceptable_or_degraded": 99.0
+}

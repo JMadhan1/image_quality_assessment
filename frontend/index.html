@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Image Quality &amp; Defect Detection</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f7f4ec;
+    --bg-elevated: #fffdf8;
+    --border: #e8e0d2;
+    --text: #2b2621;
+    --text-muted: #837a6d;
+    --accent: #bd5d3a;
+    --accent-hover: #a84f2f;
+    --accent-soft: #f2e2d6;
+    --success: #5f7a4f;
+    --success-soft: #e7ede1;
+    --warning: #b8842f;
+    --warning-soft: #f3e7d3;
+    --danger: #ac4530;
+    --danger-soft: #f3ded7;
+    --radius: 16px;
+    --shadow: 0 1px 2px rgba(60,45,30,0.05), 0 10px 28px -14px rgba(60,45,30,0.16);
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", ui-serif, serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #221e1a;
+      --bg-elevated: #2b2621;
+      --border: #3d362e;
+      --text: #f1ebe0;
+      --text-muted: #a89c8a;
+      --accent: #e08a5f;
+      --accent-hover: #e89b74;
+      --accent-soft: #3e2f24;
+      --success: #93b17e;
+      --success-soft: #2b3324;
+      --warning: #d9ac5f;
+      --warning-soft: #3a2f1c;
+      --danger: #d97e64;
+      --danger-soft: #3c2620;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 14px 32px -18px rgba(0,0,0,0.65);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg); color: var(--text);
+    margin: 0; padding: 2.5rem 1.25rem 4rem; min-height: 100vh;
+  }
+  .wrap { max-width: 1060px; margin: 0 auto; }
+  header { display: flex; align-items: center; gap: 14px; margin-bottom: 2.25rem; }
+  .logo { width: 42px; height: 42px; border-radius: 12px; background: var(--accent);
+          display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  h1 { font-family: var(--serif); font-size: 1.5rem; font-weight: 500; margin: 0; letter-spacing: -0.01em; }
+  .subtitle { color: var(--text-muted); font-size: 0.88rem; margin-top: 3px; }
+
+  .grid { display: grid; grid-template-columns: 1fr; gap: 1.25rem; }
+  @media (min-width: 860px) { .grid { grid-template-columns: 1fr 1.15fr; align-items: start; } }
+
+  .card {
+    background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 1.5rem;
+  }
+  .card h2 { font-size: 0.95rem; margin: 0 0 1rem; color: var(--text-muted); text-transform: uppercase;
+             letter-spacing: 0.04em; font-weight: 600; }
+
+  #dropzone {
+    border: 2px dashed var(--border); border-radius: var(--radius); padding: 2.75rem 1.5rem;
+    text-align: center; cursor: pointer; transition: border-color 0.15s, background 0.15s;
+  }
+  #dropzone:hover, #dropzone.drag { border-color: var(--accent); background: var(--accent-soft); }
+  #dropzone svg { opacity: 0.55; margin-bottom: 0.5rem; }
+  #dropzone p { margin: 0; color: var(--text-muted); font-size: 0.92rem; }
+  #dropzone .hint { font-size: 0.78rem; margin-top: 4px; opacity: 0.75; }
+
+  #preview { max-width: 100%; max-height: 300px; margin-top: 1rem; border-radius: 10px; display: none; }
+  #loading { display: none; align-items: center; gap: 8px; color: var(--text-muted); margin-top: 1rem; font-size: 0.9rem; }
+  .spinner { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent);
+             border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .error-box { color: var(--danger); background: var(--danger-soft); border-radius: 10px; padding: 10px 14px;
+               margin-top: 1rem; font-size: 0.88rem; display: none; }
+
+  #result { display: none; }
+  .gauge-row { display: flex; align-items: center; gap: 1.25rem; margin-bottom: 1.1rem; }
+  .gauge-num { font-size: 1.9rem; font-weight: 700; }
+  .gauge-num span { font-size: 1rem; font-weight: 500; color: var(--text-muted); }
+  .label-badge { display: inline-block; padding: 5px 14px; border-radius: 999px; font-weight: 600;
+                 font-size: 0.78rem; letter-spacing: 0.03em; text-transform: uppercase; margin-top: 6px; }
+  .label-ACCEPTABLE { background: var(--success-soft); color: var(--success); }
+  .label-DEGRADED { background: var(--warning-soft); color: var(--warning); }
+  .label-DEFECTIVE { background: var(--danger-soft); color: var(--danger); }
+
+  .issues { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1.25rem; }
+  .issue-card { border: 1px solid var(--border); background: var(--bg); padding: 8px 12px; border-radius: 10px;
+                font-size: 0.82rem; display: flex; flex-direction: column; gap: 2px; min-width: 120px; }
+  .issue-card .type { font-weight: 600; text-transform: capitalize; }
+  .issue-card .meta { color: var(--text-muted); font-size: 0.75rem; }
+  .sev-high .type { color: var(--danger); }
+  .sev-medium .type { color: var(--warning); }
+  .sev-low .type { color: var(--success); }
+  .none-badge { display: inline-flex; align-items: center; gap: 6px; background: var(--success-soft);
+                color: var(--success); padding: 8px 14px; border-radius: 10px; font-size: 0.85rem; font-weight: 600; }
+
+  .feat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin-bottom: 1.25rem; }
+  .feat-item { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; }
+  .feat-item .k { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; }
+  .feat-item .v { font-size: 0.95rem; font-weight: 600; margin-top: 2px; }
+
+  .heatmap-row { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+  .heatmap-row figure { margin: 0; flex: 1; min-width: 140px; }
+  .heatmap-row img { width: 100%; border-radius: 10px; display: block; }
+  .heatmap-row figcaption { font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; text-align: center; }
+
+  #history-list { display: flex; flex-direction: column; gap: 6px; }
+  .hist-row { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+              padding: 10px 12px; border-radius: 10px; background: var(--bg); border: 1px solid var(--border);
+              font-size: 0.85rem; }
+  .hist-row .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hist-row .time { color: var(--text-muted); font-size: 0.75rem; }
+  .refresh-btn { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-elevated);
+                 color: var(--text); cursor: pointer; font-size: 0.8rem; }
+  .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .empty-state { color: var(--text-muted); font-size: 0.85rem; padding: 8px 0; }
+  input[type="file"] { display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5-9 9"/>
+      </svg>
+    </div>
+    <div>
+      <h1>Image Quality &amp; Defect Detection</h1>
+      <div class="subtitle">Upload an image for an automatic quality assessment, explained.</div>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Upload</h2>
+      <div id="dropzone">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <p>Click or drag an image here</p>
+        <p class="hint">JPEG, PNG · analyzed instantly</p>
+        <input type="file" id="fileInput" accept="image/*" />
+      </div>
+      <img id="preview" alt="preview" />
+      <div id="loading"><div class="spinner"></div>Analyzing…</div>
+      <div class="error-box" id="error"></div>
+    </div>
+
+    <div class="card" id="result">
+      <h2>Result</h2>
+      <div class="gauge-row">
+        <div>
+          <div class="gauge-num" id="score"></div>
+          <span class="label-badge" id="label"></span>
+        </div>
+      </div>
+      <div class="issues" id="issues"></div>
+      <div class="feat-grid" id="featGrid"></div>
+      <div class="heatmap-row">
+        <figure><img id="origPreview" alt="original" /><figcaption>Original</figcaption></figure>
+        <figure><img id="heatmap" alt="gradcam heatmap" /><figcaption>Grad-CAM attention</figcaption></figure>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top: 1.25rem;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 0.85rem;">
+      <h2 style="margin:0;">History</h2>
+      <button class="refresh-btn" onclick="loadHistory()">Refresh</button>
+    </div>
+    <div id="history-list"></div>
+  </div>
+</div>
+
+<script>
+// Backend base URL. Plain static HTML has no build-time env-var injection,
+// so this is the one place to change it if the API isn't on localhost:8000
+// (docker-compose maps the backend to host port 8000 by default).
+const API_BASE = "http://localhost:8000";
+
+const dropzone = document.getElementById("dropzone");
+const fileInput = document.getElementById("fileInput");
+const preview = document.getElementById("preview");
+const loading = document.getElementById("loading");
+const errorEl = document.getElementById("error");
+const resultEl = document.getElementById("result");
+
+dropzone.addEventListener("click", () => fileInput.click());
+dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.classList.add("drag"); });
+dropzone.addEventListener("dragleave", () => dropzone.classList.remove("drag"));
+dropzone.addEventListener("drop", (e) => {
+  e.preventDefault();
+  dropzone.classList.remove("drag");
+  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener("change", () => {
+  if (fileInput.files.length) handleFile(fileInput.files[0]);
+});
+
+async function handleFile(file) {
+  errorEl.style.display = "none";
+  errorEl.textContent = "";
+  resultEl.style.display = "none";
+  const previewUrl = URL.createObjectURL(file);
+  preview.src = previewUrl;
+  preview.style.display = "block";
+  loading.style.display = "flex";
+
+  const form = new FormData();
+  form.append("file", file);
+
+  try {
+    const res = await fetch(`${API_BASE}/analyze`, { method: "POST", body: form });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(err.detail || "Analysis failed");
+    }
+    const data = await res.json();
+    renderResult(data, previewUrl);
+    loadHistory();
+  } catch (e) {
+    errorEl.textContent = e.message;
+    errorEl.style.display = "block";
+  } finally {
+    loading.style.display = "none";
+  }
+}
+
+function renderResult(data, previewUrl) {
+  resultEl.style.display = "block";
+  document.getElementById("score").innerHTML = `${data.quality_score}<span> / 100</span>`;
+
+  const labelEl = document.getElementById("label");
+  labelEl.textContent = data.quality_label;
+  labelEl.className = `label-badge label-${data.quality_label}`;
+
+  const issuesEl = document.getElementById("issues");
+  issuesEl.innerHTML = "";
+  if (!data.issues.length) {
+    issuesEl.innerHTML = '<span class="none-badge">✓ no issues detected</span>';
+  } else {
+    data.issues.forEach((issue) => {
+      const card = document.createElement("div");
+      card.className = `issue-card sev-${issue.severity}`;
+      card.innerHTML = `<span class="type">${issue.type.replace('_', ' ')}</span>` +
+        `<span class="meta">severity: ${issue.severity} · confidence: ${issue.confidence}</span>`;
+      issuesEl.appendChild(card);
+    });
+  }
+
+  const featGrid = document.getElementById("featGrid");
+  featGrid.innerHTML = Object.entries(data.engineered_features)
+    .map(([k, v]) => `<div class="feat-item"><div class="k">${k.replace(/_/g, ' ')}</div><div class="v">${v}</div></div>`)
+    .join("");
+
+  document.getElementById("origPreview").src = previewUrl;
+  document.getElementById("heatmap").src = `data:image/png;base64,${data.gradcam_heatmap_base64}`;
+}
+
+async function loadHistory() {
+  const listEl = document.getElementById("history-list");
+  try {
+    const res = await fetch(`${API_BASE}/history`);
+    const rows = await res.json();
+    if (!rows.length) {
+      listEl.innerHTML = '<div class="empty-state">No analyses yet — upload an image to get started.</div>';
+      return;
+    }
+    listEl.innerHTML = rows.map(r => `
+      <div class="hist-row">
+        <span class="name">#${r.id} — ${r.filename}</span>
+        <span class="label-badge label-${r.quality_label}" style="margin:0;">${r.quality_label}</span>
+        <span>${r.quality_score}/100</span>
+        <span class="time">${new Date(r.created_at).toLocaleString()}</span>
+      </div>
+    `).join("");
+  } catch (e) {
+    listEl.innerHTML = `<div class="error-box" style="display:block;">Could not load history: ${e.message}</div>`;
+  }
+}
+
+loadHistory();
+</script>
+</body>
+</html>

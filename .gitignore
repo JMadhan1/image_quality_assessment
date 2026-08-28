@@ -1,0 +1,14 @@
+venv/
+__pycache__/
+*.pyc
+data/
+backend/results.db
+backend/__pycache__/
+.env
+
+# Only the final serving checkpoint is tracked (models/hybrid_model.pt).
+# Intermediate experiment checkpoints are large binaries that don't belong
+# in git history -- they're regenerable via train.py with the flags
+# documented in EVALUATION.md, and their *results* (small JSON) are kept.
+models/hybrid_model_v*.pt
+models/hybrid_model_v1_resnet18.pt

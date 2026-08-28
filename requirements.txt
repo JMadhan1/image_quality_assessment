@@ -1,0 +1,15 @@
+torch
+torchvision
+fastapi
+uvicorn[standard]
+python-multipart
+sqlalchemy
+pillow
+numpy
+opencv-python-headless
+scikit-image
+scikit-learn
+pandas
+matplotlib
+pywavelets
+grad-cam
