@@ -186,9 +186,13 @@
 
 <script>
 // Backend base URL. Plain static HTML has no build-time env-var injection,
-// so this is the one place to change it if the API isn't on localhost:8000
-// (docker-compose maps the backend to host port 8000 by default).
-const API_BASE = "http://localhost:8000";
+// so this auto-detects instead: served from localhost (e.g. via
+// docker-compose, which maps the backend to host port 8000) -> local
+// backend; served from anywhere else (e.g. deployed to Vercel, or opened
+// directly) -> the deployed Render backend.
+const API_BASE = (location.hostname === "localhost" || location.hostname === "127.0.0.1")
+  ? "http://localhost:8000"
+  : "https://image-quality-backend-mcck.onrender.com";
 
 const dropzone = document.getElementById("dropzone");
 const fileInput = document.getElementById("fileInput");
